@@ -10,7 +10,7 @@ teste1_run: $(TESTE1)
 		./$(TESTE1)
 
 teste1_compile: $(OUT_LIB)
-		gcc $(TESTE1) -o $(TESTE1) -L./lib -lmthread
+		gcc $(TESTE1).c -o $(TESTE1) -L./lib -lmthread
 
 $(OUT_LIB): $(OBJ_MTHREAD)
 		ar crs $(OUT_LIB) $(OBJ_MTHREAD)
