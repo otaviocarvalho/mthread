@@ -4,13 +4,18 @@ OUT_LIB = lib/libmthread.a
 FLAGS = -Wall -lrt
 INCLUDES = -I./include/
 
-TESTE1 = testes/teste
+FLAGS_TESTES = -L./lib -lmthread -Wall -lrt
+TESTE = testes/teste
+TESTE1 = testes/teste1
 
-teste1_run: $(TESTE1)
+teste1_run: teste1_compile
 		./$(TESTE1)
-
-teste1_compile: $(OUT_LIB)
-		gcc $(TESTE1).c -o $(TESTE1) -L./lib -lmthread
+teste1_compile: teste_run
+		gcc $(TESTE1).c -o $(TESTE1) $(FLAGS_TESTES)
+teste_run: teste_compile
+		./$(TESTE)
+teste_compile: $(OUT_LIB)
+		gcc $(TESTE).c -o $(TESTE) $(FLAGS_TESTES)
 
 $(OUT_LIB): $(OBJ_MTHREAD)
 		ar crs $(OUT_LIB) $(OBJ_MTHREAD)
@@ -20,4 +25,4 @@ $(OBJ_MTHREAD): $(SRC_MTHREAD)
 
 clean:
 		rm -rf $(OBJ_MTHREAD) $(OUT_LIB)
-		rm $(TESTE1)
+		rm $(TESTE) $(TESTE1)

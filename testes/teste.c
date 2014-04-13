@@ -2,12 +2,11 @@
 /*
  * Programa exemplo de teste da biblioteca microthreads
  *
- * Versão 1 - 20/03/2014
  */
 
-#include "../include/mthread.h" /*considera que este fonte está no diretório “testes” (vide seção 8)*/
 #include <stdio.h>
 #include <stdlib.h>
+#include "../include/mthread.h"
 
 void func0(void *arg) {
 
@@ -23,20 +22,25 @@ void func1(void *arg) {
 }    /* termina a execução da thread ao chegar ao final da função naturalmente */
 
 int main(int argc, char *argv[]) {
-    /*int id0, id1;*/
-    /*int i;*/
+    int id0, id1;
+    int i;
 
-    printf("Test initialization was successful!\n");
-
-	/* Código de execução */
-
-    /*id0 = mcreate(func0, (void *)&i);*/
-    /*id1 = mcreate(func1, (void *)&i);*/
+    printf("\nTeste 0: Teste padrão fornecido para o trabalho\n");
 
 	/* Código de execução */
 
-    /*mjoin(id0);*/
-    /*mjoin(id1);*/
+    id0 = mcreate(func0, (void *)&i);
+    id1 = mcreate(func1, (void *)&i);
+
+    printf("Teste id0: %d\n", id0);
+    printf("Teste id1: %d\n", id1);
+
+	/* Código de execução */
+
+    mjoin(id0);
+    mjoin(id1);
+
+    printf("\n");
 
     return 0;
 }
