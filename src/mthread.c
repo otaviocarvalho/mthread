@@ -3,6 +3,8 @@
 #include "../include/mthread.h"
 #include <time.h>
 
+#define MTHREAD_STACK 1024*1024
+
 struct timespec time_diff(struct timespec start, struct timespec end){
 	struct timespec temp;
 
@@ -32,7 +34,7 @@ void timespec_test(){
 }
 
 int mcreate (void (*start_routine)(void*), void *arg){
-        return 0;
+    return 0;
 }
 int myield(void){
     return 0;
