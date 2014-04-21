@@ -8,9 +8,9 @@
 #define RUNNING 1
 #define BLOCKED 2
 
-int mthread_initialized = 0;
+int initialized_mthread = 0;
 int num_threads = 0;
-int num_tid = 1;
+int num_tid = 0;
 
 tcb_t *running_thread = NULL;
 tcb_priority_queue_t *ready_queue = NULL;
@@ -20,17 +20,24 @@ tcb_list_t *threads_list = NULL;
 
 ucontext_t *thread_finished; // Contexto a ser chamado quando uma thread termina
 
-int tcb_priority_queue_add(tcb_t *data, tcb_priority_queue_t *queue){
+int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
     tcb_priority_queue_t *n = (tcb_priority_queue_t *) malloc(sizeof(tcb_priority_queue_t));
 
     if (n != NULL){
-        n->data = data;
-        n->next = NULL;
+        if (queue->data == NULL){ // Insere primeiro elemento
+            queue->front = queue;
+            queue->back = queue;
+            queue->data = data;
+            queue->next = NULL;
+            queue->prev = NULL;
 
-        if (queue == NULL){
-            queue = n;
-        } else {
-            queue->next = n;
+            free(n);
+        }
+        else { // Insere demais elementos
+            n->data = data;
+            n->next = NULL;
+            (queue->back)->next = n;
+            queue->back = n;
         }
 
         return 1;
@@ -40,21 +47,48 @@ int tcb_priority_queue_add(tcb_t *data, tcb_priority_queue_t *queue){
 }
 
 tcb_t* tcb_priority_queue_remove(tcb_priority_queue_t *q){
-    tcb_t *result;
+    tcb_t *removed_data;
+    tcb_priority_queue_t *remove;
 
     if (q == NULL){
         return NULL;
     }
-    else if (q->next == NULL){
-        result = q->data;
-        q = NULL;
+    else if (q->next == NULL){ // Único elemento
+        removed_data = q->data;
+        q->data = NULL;
+        q->prev = NULL;
+        q->next = NULL;
+        q->back = NULL;
+        q->front = NULL;
     }
-    else {
-        result = q->data;
-        q = q->next;
+    else { // Mais de um elemento
+        removed_data = q->data;
+        remove = q->next;
+
+        q->front = q->next;
+        q->data = (q->next)->data;
+        q->prev = NULL;
+        q->next = (q->next)->next;
+
+        free(remove);
     }
 
-    return result;
+    return removed_data;
+}
+
+void tcb_priority_queue_print(tcb_priority_queue_t* q){
+    printf("[");
+    if (q != NULL){ // Verifica se existe algum elemento válido na fila
+        if (q->data != NULL){
+            tcb_priority_queue_t* aux = q;
+
+            while (aux != NULL){
+                printf("%d | ", aux->data->tid);
+                aux = aux->next;
+            }
+        }
+    }
+    printf("]\n");
 }
 
 tcb_priority_queue_t* tcb_priority_queue_init(){
@@ -63,6 +97,9 @@ tcb_priority_queue_t* tcb_priority_queue_init(){
     if (q != NULL){
         q->data = NULL;
         q->next = NULL;
+        q->prev = NULL;
+        q->front = NULL;
+        q->back = NULL;
     }
 
     return q;
@@ -80,7 +117,6 @@ int tcb_list_add(tcb_list_t *list, tcb_t *thread){
         list->next = NULL;
 
         free(node);
-        return 0;
     }
     else {
         node->data = thread;
@@ -94,13 +130,14 @@ int tcb_list_add(tcb_list_t *list, tcb_t *thread){
         aux->next = node;
         node->prev = aux;
         node->next = NULL;
-
-        return 1;
     }
+
+    return 0;
 }
 
 tcb_t* tcb_list_remove(tcb_list_t *list, tcb_t *thread){
-    tcb_t *remove;
+    tcb_t *removed_data;
+    tcb_list_t *remove;
     tcb_list_t *aux = list;
 
     while (aux != NULL){
@@ -111,27 +148,33 @@ tcb_t* tcb_list_remove(tcb_list_t *list, tcb_t *thread){
 
         if ( ((aux->data)->tid) == thread->tid ){
             if (aux->prev == NULL && aux->next == NULL){ // Remove único elemento
+                remove = aux;
+                removed_data = remove->data;
                 aux->data = NULL;
-           }
+            }
             else if (aux->prev == NULL){ // Remove o primeiro elemento de uma lista não vazia
-
                 list->data = (aux->next)->data;
                 list->prev = NULL;
                 list->next = (aux->next)->next;
+                remove = aux->next;
+                removed_data = remove->data;
+                free(remove);
             }
             else if (aux->next == NULL){ // Remove o último elemento
                 (aux->prev)->next = NULL;
+                remove = aux;
+                removed_data = remove->data;
+                free(remove);
             }
             else { // Remove no meio da lista
                 (aux->prev)->next = aux->next;
                 (aux->next)->prev = aux->prev;
+                remove = aux;
+                removed_data = remove->data;
+                free(remove);
             }
 
-            remove = aux->data;
-            free(remove);
-            /*free(aux);*/
-
-            return remove;
+            return removed_data;
         }
 
         aux = aux->next;
@@ -193,21 +236,27 @@ tcb_t* schedule(){
     return scheduled;
 }
 
-int dispatch_next(){
+void dispatch_next(){
     tcb_t *scheduled_thread = schedule();
+    /*printf("scheduled_thread tid %d\n", scheduled_thread->tid);*/
 
-    if (scheduled_thread == NULL){
-        return -1;
-    }
-    else {
+    if (scheduled_thread != NULL){
         // Thread é colocada em execução (Dispatch)
         setcontext(scheduled_thread->context);
-        return 0;
     }
+
+    /*if (scheduled_thread == NULL){*/
+        /*return -1;*/
+    /*}*/
+    /*else {*/
+        /*// Thread é colocada em execução (Dispatch)*/
+        /*setcontext(scheduled_thread->context);*/
+        /*return 0;*/
+    /*}*/
 }
 
 int add_ready(tcb_t *thread){
-    if (tcb_priority_queue_add(thread, ready_queue)){
+    if (tcb_priority_queue_add(ready_queue, thread)){
         if (thread->status == BLOCKED){
             tcb_list_remove(blocked, thread);
         }
@@ -242,14 +291,16 @@ int create_thread(ucontext_t* context){
 }
 
 void thread_finish(){
+    /*printf("thread_finish context\n");*/
+    /*exit(-1);*/
     /*murder(running_thread);*/
     tcb_list_t *waiting_list = running_thread->waiting;
 
     while (waiting_list != NULL){
-        tcb_t *pending_thread = (tcb_t *) waiting_list->data;
-        tcb_list_remove(running_thread->waiting, pending_thread);
-        pending_thread->status = READY;
-        add_ready(pending_thread);
+        /*tcb_t *pending_thread = (tcb_t *) waiting_list->data;*/
+        /*tcb_list_remove(running_thread->waiting, pending_thread); // Erro no free() da lista*/
+        /*pending_thread->status = READY;*/
+        /*add_ready(pending_thread);*/
 
         waiting_list = waiting_list->next;
     }
@@ -257,11 +308,16 @@ void thread_finish(){
     num_threads--;
     free(running_thread->waiting);
     free(running_thread);
+
     dispatch_next();
 }
 
 int mthread_init(){
     int dispatched_main = 0;
+    int result_main_context = 0;
+
+    // Sinaliza que inicializou a biblioteca
+    initialized_mthread = 1;
 
     // Aloca o contexto principal
     ucontext_t *main_context = (ucontext_t*) malloc( sizeof(ucontext_t) );
@@ -285,9 +341,6 @@ int mthread_init(){
         return -3;
     }
 
-    num_threads = 0;
-    num_tid = 0;
-
     // Cria o contexto que trata o fim de uma thread
     thread_finished = (ucontext_t *) malloc(sizeof(ucontext_t));
 
@@ -303,26 +356,30 @@ int mthread_init(){
             return -5;
         }
 
-        makecontext(thread_finished, thread_finish, 0); // Chama a função thread_finish() ao terminar o contexto
+        makecontext(thread_finished, (void (*)(void)) thread_finish, 0); // Chama a função thread_finish() ao terminar o contexto
+        /*setcontext(thread_finished);*/
     }
     else {
         return -4;
     }
 
+    // Salva o contexto atual antes de fazer o dispatch da main
+    result_main_context = getcontext(main_context);
+
     if (!dispatched_main){
         dispatched_main = 1;
-
-        if (getcontext(main_context) < 0){
+        if (result_main_context < 0){
             return -6;
         }
 
         if (create_thread(main_context) < 0){
-            return -7;
-        }
-
-        if (dispatch_next() < 0){
             return -8;
         }
+
+        dispatch_next();
+        /*if (dispatch_next() < 0){*/
+            /*return -9;*/
+        /*}*/
     }
 
     return 0;
@@ -357,9 +414,37 @@ void timespec_test(){
 }
 
 
-int mcreate (void (*start_routine)(void*), void *arg){
-    return 0;
+int mcreate(void (*start_routine)(void*), void *arg){
+    ucontext_t *thr_context = (ucontext_t *) malloc(sizeof(ucontext_t));
+    int tid;
+
+    if (!initialized_mthread){
+        mthread_init();
+    }
+
+    if (thr_context != NULL){
+        getcontext(thr_context);
+
+        thr_context->uc_stack.ss_sp = malloc(SIGSTKSZ);
+        thr_context->uc_stack.ss_size = SIGSTKSZ;
+        thr_context->uc_link = thread_finished;
+
+        // Testa se alocou a stack adequadamente
+        if (thr_context->uc_stack.ss_sp == NULL){
+            return -2;
+        }
+
+        makecontext(thr_context, (void (*)(void)) start_routine, 1, arg);
+    }
+    else {
+        return -1;
+    }
+
+    tid = create_thread(thr_context);
+
+    return tid;
 }
+
 int myield(void){
     return 0;
 }
@@ -379,6 +464,48 @@ int mlock (mmutex_t *m){
 int munlock (mmutex_t *m){
     return 0;
 }
+
+/*// Testa mthread_create*/
+/*void thread0(void *arg) {*/
+    /*printf("Entrou na thread0\n");*/
+    /*return;*/
+/*}*/
+/*int main(){*/
+    /*int tid = -1;*/
+    /*int i;*/
+
+    /*tid = mcreate(thread0, (void *)&i);*/
+    /*tid = mcreate(thread0, (void *)&i);*/
+    /*printf("tid %d\n", tid);*/
+    /*dispatch_next();*/
+    /*tcb_priority_queue_print(ready_queue);*/
+    /*return 0;*/
+/*}*/
+
+/*// Testa a queue*/
+/*int main(){*/
+    /*tcb_t *aux = tcb_create(1, 0, NULL);*/
+    /*tcb_t *aux2 = tcb_create(2, 0, NULL);*/
+    /*tcb_t *aux3 = tcb_create(3, 0, NULL);*/
+    /*tcb_t *aux4 = tcb_create(4, 0, NULL);*/
+
+    /*tcb_priority_queue_t *q = tcb_priority_queue_init();*/
+
+    /*// Testa inicio*/
+    /*tcb_priority_queue_print(q);*/
+    /*tcb_priority_queue_remove(q);*/
+    /*tcb_priority_queue_remove(q);*/
+    /*tcb_priority_queue_print(q);*/
+    /*tcb_priority_queue_add(q,aux);*/
+    /*tcb_priority_queue_add(q,aux2);*/
+    /*tcb_priority_queue_add(q,aux3);*/
+    /*tcb_priority_queue_print(q);*/
+    /*tcb_priority_queue_remove(q);*/
+    /*tcb_priority_queue_remove(q);*/
+    /*tcb_priority_queue_remove(q);*/
+    /*tcb_priority_queue_remove(q);*/
+    /*tcb_priority_queue_print(q);*/
+/*}*/
 
 /*// Testa a lista*/
 /*int main(){*/
