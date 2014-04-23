@@ -521,37 +521,75 @@ int mjoin(int tid){
 }
 
 int mmutex_init(mmutex_t *m){
+    m->locked = 0;
+    m->waiting = tcb_list_create();
     return 0;
 }
 
 int mlock (mmutex_t *m){
+    if (m->locked == 0){
+        m->locked = 1;
+        printf("lockou\n");
+    }
+    else {
+
+        printf("here locked\n");
+        tcb_list_add(m->waiting, running_thread);
+
+        running_thread->status = BLOCKED;
+        tcb_list_add(blocked, running_thread);
+
+        getcontext(running_thread->context);
+
+        dispatch_next();
+    }
+
     return 0;
 }
 
 int munlock (mmutex_t *m){
+    m->locked = 0;
+
+    if (m->waiting != NULL){
+        tcb_t *thread_waiting = tcb_list_remove(m->waiting, (m->waiting)->data);
+        if (thread_waiting != NULL){
+            /*add_ready(thread_waiting);*/
+            thread_waiting->status = READY;
+        }
+    }
+
     return 0;
 }
 
 /*// Testa mlock*/
+/*mmutex_t mutex;*/
+/*int test = 0;*/
 /*void thread0(void *arg) {*/
-    /*int i;*/
     /*printf("Entrou na thread0\n");*/
+    /*mlock(&mutex);*/
+    /*printf("bloqueou thread\n");*/
+    /*test++;*/
+    /*munlock(&mutex);*/
+    /*printf("desbloqueou thread\n");*/
     /*return;*/
 /*}*/
 /*int main(){*/
     /*int tid = -1;*/
     /*int i;*/
 
-    /*[>tid = mcreate(thread1, (void *)&i);<]*/
-    /*[>printf("tid %d\n", tid);<]*/
-    /*[>tid = mcreate(thread0, (void *)&i);<]*/
-    /*[>printf("tid %d\n", tid);<]*/
+    /*mmutex_init(&mutex);*/
     /*tid = mcreate(thread0, (void *)&i);*/
     /*printf("tid %d\n", tid);*/
-    /*[>dispatch_next();<]*/
+
+    /*mlock(&mutex);*/
+    /*printf("bloqueou thread main\n");*/
+    /*test++;*/
+    /*printf("%d\n", test);*/
+    /*mjoin(1);*/
+    /*munlock(&mutex);*/
+    /*printf("desbloqueou thread main\n");*/
 
     /*printf("entrou\n");*/
-    /*mjoin(1);*/
     /*printf("acabou\n");*/
     /*tcb_priority_queue_print(ready_queue);*/
     /*return 0;*/

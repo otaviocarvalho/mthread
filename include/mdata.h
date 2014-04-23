@@ -11,11 +11,6 @@
  */
 #include <ucontext.h>
 
-typedef struct mmutex_t {
-	int flag;
-    //TCB *next;
-} mmutex_t;
-
 typedef struct tcb_list {
     struct tcb *data;
     struct tcb_list *prev;
@@ -37,3 +32,9 @@ typedef struct tcb_priority_queue {
     struct tcb_priority_queue *prev;
     struct tcb_priority_queue *next;
 } tcb_priority_queue_t;
+
+typedef struct mmutex_t {
+    int locked;
+    tcb_list_t *waiting;
+} mmutex_t;
+
