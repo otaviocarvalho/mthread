@@ -38,4 +38,4 @@ $(OBJ_MTHREAD): $(SRC_MTHREAD)
 
 clean:
 		rm -rf $(OBJ_MTHREAD) $(OUT_LIB)
-		rm $(TESTE) $(TESTE1) $(TESTE2) $(TESTE_MLOCK)
+		rm $(TESTE) $(TESTE1)
