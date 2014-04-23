@@ -27,8 +27,8 @@ typedef struct tcb {
 
 typedef struct tcb_priority_queue {
     tcb_t *data;
-    struct tcb_priority_queue *front;
-    struct tcb_priority_queue *back;
+    //struct tcb_priority_queue *front;
+    //struct tcb_priority_queue *back;
     struct tcb_priority_queue *prev;
     struct tcb_priority_queue *next;
 } tcb_priority_queue_t;

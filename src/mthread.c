@@ -23,10 +23,9 @@ int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
     tcb_priority_queue_t *n = (tcb_priority_queue_t *) malloc(sizeof(tcb_priority_queue_t));
 
     if (n != NULL){
-
         if (queue->data == NULL){ // Insere primeiro elemento
-            queue->front = queue;
-            queue->back = queue;
+            /*queue->front = queue;*/
+            /*queue->back = queue;*/
             queue->data = data;
             queue->next = NULL;
             queue->prev = NULL;
@@ -36,14 +35,20 @@ int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
         else { // Insere demais elementos
             n->data = data;
             n->next = NULL;
+
+            /*tcb_priority_queue_print(ready_queue);*/
             tcb_priority_queue_t *aux = queue;
-            while (queue->next != NULL)
+            while (aux->next != NULL){
                 aux = aux->next;
-            /*printf("aux %d\n", aux->data->tid);*/
+            }
             aux->next = n;
-            queue->back = n;
+            /*queue->back = n;*/
+
+            /*printf("tid %d\n", data->tid);*/
             /*(queue->back)->next = n;*/
             /*queue->back = n;*/
+            /*printf("queue back tid %d\n", (queue->back)->data->tid);*/
+            /*printf("queue back tid %d\n", ((queue->prev)->back)->data->tid);*/
 
             /*printf("queue %d\n", (ready_queue->next)->data->tid);*/
         }
@@ -66,14 +71,19 @@ tcb_t* tcb_priority_queue_remove(tcb_priority_queue_t *q){
         q->data = NULL;
         q->prev = NULL;
         q->next = NULL;
-        q->back = NULL;
-        q->front = NULL;
+        /*q->back = NULL;*/
+        /*q->front = NULL;*/
     }
     else { // Mais de um elemento
         removed_data = q->data;
         remove = q->next;
 
-        q->front = q->next;
+        /*q->front = q->next;*/
+        /*q->back = (q->next)->back;*/
+
+        /*printf("queue back queue remove %d\n", (q->next)->back->data->tid);*/
+        /*printf("queue back queue remove %d\n", q->back->data->tid);*/
+
         q->data = (q->next)->data;
         q->prev = NULL;
         q->next = (q->next)->next;
@@ -106,8 +116,8 @@ tcb_priority_queue_t* tcb_priority_queue_init(){
         q->data = NULL;
         q->next = NULL;
         q->prev = NULL;
-        q->front = NULL;
-        q->back = NULL;
+        /*q->front = NULL;*/
+        /*q->back = NULL;*/
     }
 
     return q;
@@ -262,8 +272,9 @@ tcb_t* schedule(){
 }
 
 int dispatch_next(){
+    tcb_priority_queue_print(ready_queue);
     tcb_t *scheduled_thread = schedule();
-    /*printf("scheduled_thread tid %d\n", scheduled_thread->tid);*/
+    printf("scheduled_thread tid %d\n", scheduled_thread->tid);
 
     if (scheduled_thread != NULL){
         // Thread é colocada em execução (Dispatch)
@@ -283,7 +294,6 @@ int dispatch_next(){
 
 int add_ready(tcb_t *thread){
     if (tcb_priority_queue_add(ready_queue, thread)){
-
         if (thread->status == BLOCKED){
             tcb_list_remove(blocked, thread);
         }
@@ -314,6 +324,7 @@ int create_thread(ucontext_t* context){
     num_threads++;
     num_tid++;
 
+
     return new_tid;
 }
 
@@ -329,6 +340,9 @@ void thread_finish(){
             tcb_t *pending_thread = (tcb_t *) waiting_list->data;
             tcb_list_remove(running_thread->waiting, pending_thread); // Erro no free() da lista
             pending_thread->status = READY;
+            /*printf("entrou pending error\n");*/
+            /*printf("%d\n", running_thread->tid);*/
+            /*printf("%d\n", pending_thread->tid);*/
             add_ready(pending_thread);
 
             waiting_list = waiting_list->next;
@@ -561,39 +575,46 @@ int munlock (mmutex_t *m){
     return 0;
 }
 
-/*// Testa mlock*/
-/*mmutex_t mutex;*/
-/*int test = 0;*/
-/*void thread0(void *arg) {*/
-    /*printf("Entrou na thread0\n");*/
+// Testa mlock
+mmutex_t mutex;
+int test = 0;
+void thread1(void *arg) {
+    printf("Entrou na thread1\n");
+    return;
+}
+void thread0(void *arg) {
+    printf("Entrou na thread0\n");
     /*mlock(&mutex);*/
     /*printf("bloqueou thread\n");*/
     /*test++;*/
     /*munlock(&mutex);*/
     /*printf("desbloqueou thread\n");*/
-    /*return;*/
-/*}*/
-/*int main(){*/
-    /*int tid = -1;*/
-    /*int i;*/
+    return;
+}
+int main(){
+    int tid = -1;
+    int i;
 
-    /*mmutex_init(&mutex);*/
-    /*tid = mcreate(thread0, (void *)&i);*/
-    /*printf("tid %d\n", tid);*/
+    mmutex_init(&mutex);
+    tid = mcreate(thread0, (void *)&i);
+    printf("tid %d\n", tid);
+    tid = mcreate(thread1, (void *)&i);
+    printf("tid %d\n", tid);
+    tid = mcreate(thread1, (void *)&i);
 
     /*mlock(&mutex);*/
-    /*printf("bloqueou thread main\n");*/
+    printf("bloqueou thread main\n");
     /*test++;*/
     /*printf("%d\n", test);*/
-    /*mjoin(1);*/
+    mjoin(1);
     /*munlock(&mutex);*/
-    /*printf("desbloqueou thread main\n");*/
+    printf("desbloqueou thread main\n");
 
-    /*printf("entrou\n");*/
-    /*printf("acabou\n");*/
-    /*tcb_priority_queue_print(ready_queue);*/
-    /*return 0;*/
-/*}*/
+    printf("entrou\n");
+    printf("acabou\n");
+    tcb_priority_queue_print(ready_queue);
+    return 0;
+}
 
 /*// Testa myield*/
 /*void thread2(void *arg) {*/
