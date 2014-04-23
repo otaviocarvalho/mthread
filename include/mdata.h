@@ -25,6 +25,7 @@ typedef struct tcb_list {
 typedef struct tcb {
     int tid;
     int status;
+    int waiting_flag;
     ucontext_t *context;
     tcb_list_t *waiting;
 } tcb_t;

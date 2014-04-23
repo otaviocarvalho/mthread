@@ -16,7 +16,6 @@ tcb_t *running_thread = NULL;
 tcb_priority_queue_t *ready_queue = NULL;
 tcb_list_t *all_threads = NULL;
 tcb_list_t *blocked = NULL;
-tcb_list_t *threads_list = NULL;
 
 ucontext_t *thread_finished; // Contexto a ser chamado quando uma thread termina
 
@@ -24,6 +23,7 @@ int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
     tcb_priority_queue_t *n = (tcb_priority_queue_t *) malloc(sizeof(tcb_priority_queue_t));
 
     if (n != NULL){
+
         if (queue->data == NULL){ // Insere primeiro elemento
             queue->front = queue;
             queue->back = queue;
@@ -36,8 +36,16 @@ int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
         else { // Insere demais elementos
             n->data = data;
             n->next = NULL;
-            (queue->back)->next = n;
+            tcb_priority_queue_t *aux = queue;
+            while (queue->next != NULL)
+                aux = aux->next;
+            /*printf("aux %d\n", aux->data->tid);*/
+            aux->next = n;
             queue->back = n;
+            /*(queue->back)->next = n;*/
+            /*queue->back = n;*/
+
+            /*printf("queue %d\n", (ready_queue->next)->data->tid);*/
         }
 
         return 1;
@@ -218,9 +226,26 @@ tcb_t* tcb_create(int tid, int status, ucontext_t* context){
         thread->status = status;
         thread->context = context;
         thread->waiting = tcb_list_create();
+        thread->waiting_flag = 0;
     }
 
     return thread;
+}
+
+tcb_t* tcb_list_get_thread(tcb_list_t* list, int tid){
+    if (list != NULL){
+        tcb_list_t* aux = list;
+
+        while (aux != NULL){
+            if ((aux->data)->tid == tid){
+                return aux->data;
+            }
+
+            aux = aux->next;
+        }
+    }
+
+    return NULL;
 }
 
 tcb_t* schedule(){
@@ -236,7 +261,7 @@ tcb_t* schedule(){
     return scheduled;
 }
 
-void dispatch_next(){
+int dispatch_next(){
     tcb_t *scheduled_thread = schedule();
     /*printf("scheduled_thread tid %d\n", scheduled_thread->tid);*/
 
@@ -253,10 +278,12 @@ void dispatch_next(){
         /*setcontext(scheduled_thread->context);*/
         /*return 0;*/
     /*}*/
+    return 0;
 }
 
 int add_ready(tcb_t *thread){
     if (tcb_priority_queue_add(ready_queue, thread)){
+
         if (thread->status == BLOCKED){
             tcb_list_remove(blocked, thread);
         }
@@ -291,18 +318,24 @@ int create_thread(ucontext_t* context){
 }
 
 void thread_finish(){
-    /*printf("thread_finish context\n");*/
+    printf("thread_finish context\n");
     /*exit(-1);*/
     /*murder(running_thread);*/
     tcb_list_t *waiting_list = running_thread->waiting;
 
     while (waiting_list != NULL){
-        /*tcb_t *pending_thread = (tcb_t *) waiting_list->data;*/
-        /*tcb_list_remove(running_thread->waiting, pending_thread); // Erro no free() da lista*/
-        /*pending_thread->status = READY;*/
-        /*add_ready(pending_thread);*/
+        if (waiting_list->data != NULL){
+            printf("entrou pending thread\n");
+            tcb_t *pending_thread = (tcb_t *) waiting_list->data;
+            tcb_list_remove(running_thread->waiting, pending_thread); // Erro no free() da lista
+            pending_thread->status = READY;
+            add_ready(pending_thread);
 
-        waiting_list = waiting_list->next;
+            waiting_list = waiting_list->next;
+        }
+        else {
+            waiting_list = NULL;
+        }
     }
 
     num_threads--;
@@ -431,7 +464,7 @@ int mcreate(void (*start_routine)(void*), void *arg){
 
         // Testa se alocou a stack adequadamente
         if (thr_context->uc_stack.ss_sp == NULL){
-            return -2;
+            return -1;
         }
 
         makecontext(thr_context, (void (*)(void)) start_routine, 1, arg);
@@ -446,10 +479,44 @@ int mcreate(void (*start_routine)(void*), void *arg){
 }
 
 int myield(void){
+    int yield = 0;
+    getcontext(running_thread->context);
+
+    if (!yield){
+        yield = 1;
+        add_ready(running_thread);
+        dispatch_next();
+    }
+
+    printf("voltou myield\n");
     return 0;
 }
 
 int mjoin(int tid){
+    printf("mjoin thread tid %d\n", tid);
+    tcb_t *thr_wait = tcb_list_get_thread(all_threads, tid);
+
+    if (thr_wait == NULL){
+        return -1;
+    }
+
+    if (thr_wait->waiting_flag == 0){
+        tcb_list_add(thr_wait->waiting, running_thread);
+        thr_wait->waiting_flag = 1;
+    }
+    else {
+        printf("segunda thread querendo fazendo join() no mesmo tid\n");
+        return -1;
+    }
+
+    running_thread->status = BLOCKED;
+    tcb_list_add(blocked, running_thread);
+
+    getcontext(running_thread->context);
+    if (running_thread->status == BLOCKED){
+        dispatch_next();
+    }
+
     return 0;
 }
 
@@ -465,9 +532,142 @@ int munlock (mmutex_t *m){
     return 0;
 }
 
-/*// Testa mthread_create*/
+/*// Testa mlock*/
+/*void thread0(void *arg) {*/
+    /*int i;*/
+    /*printf("Entrou na thread0\n");*/
+    /*return;*/
+/*}*/
+/*int main(){*/
+    /*int tid = -1;*/
+    /*int i;*/
+
+    /*[>tid = mcreate(thread1, (void *)&i);<]*/
+    /*[>printf("tid %d\n", tid);<]*/
+    /*[>tid = mcreate(thread0, (void *)&i);<]*/
+    /*[>printf("tid %d\n", tid);<]*/
+    /*tid = mcreate(thread0, (void *)&i);*/
+    /*printf("tid %d\n", tid);*/
+    /*[>dispatch_next();<]*/
+
+    /*printf("entrou\n");*/
+    /*mjoin(1);*/
+    /*printf("acabou\n");*/
+    /*tcb_priority_queue_print(ready_queue);*/
+    /*return 0;*/
+/*}*/
+
+/*// Testa myield*/
+/*void thread2(void *arg) {*/
+    /*printf("Entrou na thread2\n");*/
+    /*myield();*/
+    /*printf("Voltou na thread2\n");*/
+    /*return;*/
+/*}*/
+
+/*void thread1(void *arg) {*/
+    /*printf("initjoin\n");*/
+    /*mjoin(3);*/
+    /*printf("endjoin\n");*/
+    /*printf("Entrou na thread1\n");*/
+    /*return;*/
+/*}*/
+/*void thread0(void *arg) {*/
+    /*int i;*/
+    /*mcreate(thread2, (void *)&i);*/
+    /*printf("Entrou na thread0\n");*/
+    /*[>myield();<]*/
+    /*[>printf("Voltou na thread0\n");<]*/
+    /*return;*/
+/*}*/
+/*int main(){*/
+    /*int tid = -1;*/
+    /*int i;*/
+
+    /*[>tid = mcreate(thread1, (void *)&i);<]*/
+    /*[>printf("tid %d\n", tid);<]*/
+    /*[>tid = mcreate(thread0, (void *)&i);<]*/
+    /*[>printf("tid %d\n", tid);<]*/
+    /*tid = mcreate(thread0, (void *)&i);*/
+    /*printf("tid %d\n", tid);*/
+    /*[>dispatch_next();<]*/
+
+    /*printf("entrou\n");*/
+    /*mjoin(1);*/
+    /*mjoin(2);*/
+    /*printf("acabou\n");*/
+    /*tcb_priority_queue_print(ready_queue);*/
+    /*return 0;*/
+/*}*/
+
+/*// Testa mthread_join e mthread_create*/
+/*void thread2(void *arg) {*/
+    /*printf("Entrou na thread2\n");*/
+    /*return;*/
+/*}*/
+
+/*void thread1(void *arg) {*/
+    /*printf("initjoin\n");*/
+    /*mjoin(3);*/
+    /*printf("endjoin\n");*/
+    /*printf("Entrou na thread1\n");*/
+    /*return;*/
+/*}*/
+/*void thread0(void *arg) {*/
+    /*int i;*/
+    /*mcreate(thread2, (void *)&i);*/
+    /*printf("Entrou na thread0\n");*/
+    /*return;*/
+/*}*/
+/*int main(){*/
+    /*int tid = -1;*/
+    /*int i;*/
+
+    /*tid = mcreate(thread1, (void *)&i);*/
+    /*printf("tid %d\n", tid);*/
+    /*tid = mcreate(thread0, (void *)&i);*/
+    /*printf("tid %d\n", tid);*/
+    /*tid = mcreate(thread0, (void *)&i);*/
+    /*printf("tid %d\n", tid);*/
+    /*[>dispatch_next();<]*/
+    /*mjoin(1);*/
+    /*printf("acabou\n");*/
+    /*return 0;*/
+/*}*/
+
+/*// Testa mthread_join*/
+/*void thread1(void *arg) {*/
+    /*printf("Entrou na thread1\n");*/
+    /*return;*/
+/*}*/
 /*void thread0(void *arg) {*/
     /*printf("Entrou na thread0\n");*/
+    /*int tid = -1;*/
+    /*[>tid = mcreate(thread1, (void *)&tid);<]*/
+    /*mjoin(1);*/
+    /*return;*/
+/*}*/
+/*int main(){*/
+    /*int tid = -1;*/
+    /*int i;*/
+
+    /*tid = mcreate(thread0, (void *)&i);*/
+    /*printf("tid %d\n", tid);*/
+    /*mjoin(1);*/
+    /*mjoin(1);*/
+    /*printf("acabou\n");*/
+    /*return 0;*/
+/*}*/
+
+/*// Testa mthread_create*/
+/*void thread1(void *arg) {*/
+    /*printf("Entrou na thread1\n");*/
+    /*return;*/
+/*}*/
+/*void thread0(void *arg) {*/
+    /*printf("Entrou na thread0\n");*/
+    /*int tid = -1;*/
+    /*tid = mcreate(thread1, (void *)&tid);*/
     /*return;*/
 /*}*/
 /*int main(){*/
@@ -476,9 +676,10 @@ int munlock (mmutex_t *m){
 
     /*tid = mcreate(thread0, (void *)&i);*/
     /*tid = mcreate(thread0, (void *)&i);*/
+    /*tid = mcreate(thread0, (void *)&i);*/
     /*printf("tid %d\n", tid);*/
     /*dispatch_next();*/
-    /*tcb_priority_queue_print(ready_queue);*/
+    /*[>tcb_priority_queue_print(ready_queue);<]*/
     /*return 0;*/
 /*}*/
 
