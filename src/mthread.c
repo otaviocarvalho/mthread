@@ -509,7 +509,13 @@ int myield(void){
         add_ready(running_thread);
 
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
-        running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
+
+        if (running_thread->forecast != 0){
+            running_thread->forecast = (running_thread->forecast + ((double) forecast_end.tv_nsec - (double) forecast_init.tv_nsec)) / 2;
+        }
+        else {
+            running_thread->forecast = ((double) forecast_end.tv_nsec - (double) forecast_init.tv_nsec);
+        }
 
         dispatch_next();
     }
@@ -537,8 +543,14 @@ int mjoin(int tid){
 
     getcontext(running_thread->context);
     if (running_thread->status == BLOCKED){
+
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
-        running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
+        if (running_thread->forecast != 0){
+            running_thread->forecast = (running_thread->forecast + ((double) forecast_end.tv_nsec - (double) forecast_init.tv_nsec)) / 2;
+        }
+        else {
+            running_thread->forecast = ((double) forecast_end.tv_nsec - (double) forecast_init.tv_nsec);
+        }
 
         dispatch_next();
     }
@@ -574,7 +586,12 @@ int mlock (mmutex_t *m){
             getcontext(running_thread->context);
 
             clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
-            running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
+            if (running_thread->forecast != 0){
+                running_thread->forecast = (running_thread->forecast + ((double) forecast_end.tv_nsec - (double) forecast_init.tv_nsec)) / 2;
+            }
+            else {
+                running_thread->forecast = ((double) forecast_end.tv_nsec - (double) forecast_init.tv_nsec);
+            }
 
             dispatch_next();
         }

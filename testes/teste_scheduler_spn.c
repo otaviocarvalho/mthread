@@ -12,14 +12,18 @@ void thread1(void *arg) {
         j++;
     }
     myield();
-    printf("Entrou na thread1 again\n");
+    printf("Entrou na thread1 pela segunda vez\n");
+    myield();
+    printf("Entrou na thread1 pela terceira vez\n");
     return;
 }
 
 void thread0(void *arg) {
     printf("Entrou na thread0\n");
     myield();
-    printf("Entrou na thread0 again\n");
+    printf("Entrou na thread0 pela segunda vez\n");
+    myield();
+    printf("Entrou na thread0 pela terceira vez\n");
     return;
 }
 
@@ -30,9 +34,16 @@ int main(){
     printf("\n Teste scheduler SPN: \n");
 
     mmutex_init(&mutex);
+
+    tid = mcreate(thread0, (void *)&i);
+    printf("tid %d\n", tid);
     tid = mcreate(thread1, (void *)&i);
     printf("tid %d\n", tid);
-    tid = mcreate(thread0, (void *)&i);
+    tid = mcreate(thread1, (void *)&i);
+    printf("tid %d\n", tid);
+    tid = mcreate(thread1, (void *)&i);
+    printf("tid %d\n", tid);
+    tid = mcreate(thread1, (void *)&i);
     printf("tid %d\n", tid);
     tid = mcreate(thread0, (void *)&i);
     printf("tid %d\n", tid);
@@ -40,6 +51,9 @@ int main(){
     mjoin(1);
     mjoin(2);
     mjoin(3);
+    mjoin(4);
+    mjoin(5);
+    mjoin(6);
 
     return 0;
 }
