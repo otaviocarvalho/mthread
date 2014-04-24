@@ -9,6 +9,18 @@ TESTE = testes/teste
 TESTE1 = testes/teste1
 TESTE2 = testes/teste2
 TESTE_MLOCK = testes/teste_mlock
+TESTE_MJOIN = testes/teste_mjoin
+TESTE_LISTA= testes/teste_lista
+
+teste_lista_run: teste_lista_compile
+		./$(TESTE_LISTA)
+teste_lista_compile: teste_mjoin_run
+		gcc $(TESTE_LISTA).c -o $(TESTE_LISTA) $(FLAGS_TESTES)
+
+teste_mjoin_run: teste_mjoin_compile
+		./$(TESTE_MJOIN)
+teste_mjoin_compile: teste_mlock_run
+		gcc $(TESTE_MJOIN).c -o $(TESTE_MJOIN) $(FLAGS_TESTES)
 
 teste_mlock_run: teste_mlock_compile
 		./$(TESTE_MLOCK)
@@ -38,4 +50,4 @@ $(OBJ_MTHREAD): $(SRC_MTHREAD)
 
 clean:
 		rm -rf $(OBJ_MTHREAD) $(OUT_LIB)
-		rm $(TESTE) $(TESTE1) $(TESTE2) $(TESTE_MLOCK)
+		rm $(TESTE) $(TESTE1) $(TESTE2) $(TESTE_MLOCK) $(TESTE_MYIELD)
