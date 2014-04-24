@@ -29,8 +29,6 @@ int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
 
         if (n != NULL){
             if (queue->data == NULL){ // Insere primeiro elemento
-                /*queue->front = queue;*/
-                /*queue->back = queue;*/
                 queue->data = data;
                 queue->next = NULL;
                 queue->prev = NULL;
@@ -41,21 +39,11 @@ int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
                 n->data = data;
                 n->next = NULL;
 
-                /*tcb_priority_queue_print(ready_queue);*/
                 tcb_priority_queue_t *aux = queue;
                 while (aux->next != NULL){
                     aux = aux->next;
                 }
                 aux->next = n;
-                /*queue->back = n;*/
-
-                /*printf("tid %d\n", data->tid);*/
-                /*(queue->back)->next = n;*/
-                /*queue->back = n;*/
-                /*printf("queue back tid %d\n", (queue->back)->data->tid);*/
-                /*printf("queue back tid %d\n", ((queue->prev)->back)->data->tid);*/
-
-                /*printf("queue %d\n", (ready_queue->next)->data->tid);*/
             }
 
             return 1;
@@ -417,7 +405,6 @@ int mthread_init(){
 
     if (thread_finished != NULL){
         getcontext(thread_finished);
-        /*thread_finished->uc_stack.ss_sp = mmap(NULL,STACKSIZE,PROT_WRITE|PROT_READ,MAP_PRIVATE|MAP_GROWSDOWN|MAP_ANONYMOUS,-1,0);*/
         thread_finished->uc_stack.ss_sp = malloc(SIGSTKSZ);
         thread_finished->uc_stack.ss_size = SIGSTKSZ;
         thread_finished->uc_link = NULL;
@@ -453,32 +440,32 @@ int mthread_init(){
 }
 
 struct timespec time_diff(struct timespec start, struct timespec end){
-	struct timespec temp;
+    struct timespec temp;
 
-	if ((end.tv_nsec-start.tv_nsec)<0) {
-		temp.tv_sec = end.tv_sec-start.tv_sec-1;
-		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
-	}
+    if ((end.tv_nsec-start.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+    }
     else {
-		temp.tv_sec = end.tv_sec-start.tv_sec;
-		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
-	}
+        temp.tv_sec = end.tv_sec-start.tv_sec;
+        temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+    }
 
-	return temp;
+    return temp;
 }
 
 void timespec_test(){
     struct timespec time1, time2;
     int i, temp;
 
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time1);
-	for (i = 0; i< 242000000; i++)
-		temp+=temp;
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time2);
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time1);
+    for (i = 0; i< 242000000; i++)
+        temp+=temp;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time2);
 
     printf("Thread execution time in seconds: %lf\n", (double) time_diff(time1,time2).tv_sec);
     printf("Thread execution time in nanoseconds: %lf\n", (double) time_diff(time1,time2).tv_nsec);
-}
+    }
 
 
 int mcreate(void (*start_routine)(void*), void *arg){
@@ -519,17 +506,10 @@ int myield(void){
     if (!yield){
         yield = 1;
 
-        /*printf("before add ready\n");*/
-        /*tcb_priority_queue_print(ready_queue);*/
-
         add_ready(running_thread);
-
-        /*tcb_priority_queue_print(ready_queue);*/
-        /*printf("after add ready\n");*/
 
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
         running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
-        /*printf("forecast for thread %d: %lf\n", running_thread->tid, running_thread->forecast);*/
 
         dispatch_next();
     }
@@ -559,7 +539,6 @@ int mjoin(int tid){
     if (running_thread->status == BLOCKED){
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
         running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
-        /*printf("forecast for thread %d: %lf\n", running_thread->tid, running_thread->forecast);*/
 
         dispatch_next();
     }
@@ -568,43 +547,60 @@ int mjoin(int tid){
 }
 
 int mmutex_init(mmutex_t *m){
-    m->locked = 0;
-    m->waiting = tcb_list_create();
-    return 0;
+    if (m == NULL)
+        m = (mmutex_t *) malloc(sizeof(mmutex_t));
+
+    if (m != NULL){
+        m->locked = 0;
+        m->waiting = tcb_list_create();
+        return 0;
+    }
+    else {
+        return -1;
+    }
 }
 
 int mlock (mmutex_t *m){
-    if (m->locked == 0){
-        m->locked = 1;
+    if (m != NULL){
+        if (m->locked == 0){
+            m->locked = 1;
+        }
+        else {
+            tcb_list_add(m->waiting, running_thread);
+
+            running_thread->status = BLOCKED;
+            tcb_list_add(blocked, running_thread);
+
+            getcontext(running_thread->context);
+
+            clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
+            running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
+
+            dispatch_next();
+        }
+
+        return 0;
     }
     else {
-        tcb_list_add(m->waiting, running_thread);
-
-        running_thread->status = BLOCKED;
-        tcb_list_add(blocked, running_thread);
-
-        getcontext(running_thread->context);
-
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
-        running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
-        /*printf("forecast for thread %d: %lf\n", running_thread->tid, running_thread->forecast);*/
-
-        dispatch_next();
+        return -1;
     }
-
-    return 0;
 }
 
 int munlock (mmutex_t *m){
-    m->locked = 0;
+    if (m != NULL){
+        m->locked = 0;
 
-    if (m->waiting != NULL){
-        tcb_t *thread_waiting = tcb_list_remove(m->waiting, (m->waiting)->data);
-        if (thread_waiting != NULL){
-            /*add_ready(thread_waiting);*/
-            thread_waiting->status = READY;
+        if (m->waiting != NULL){
+            tcb_t *thread_waiting = tcb_list_remove(m->waiting, (m->waiting)->data);
+            if (thread_waiting != NULL){
+                /*add_ready(thread_waiting);*/
+                thread_waiting->status = READY;
+            }
         }
-    }
 
-    return 0;
+        return 0;
+    }
+    else {
+        return -1;
+    }
 }
