@@ -22,7 +22,12 @@ int main(){
     tid = mcreate(thread0, (void *)&i);
     tid = mcreate(thread0, (void *)&i);
     printf("tid %d\n", tid);
-    dispatch_next();
+    mjoin(1);
+    mjoin(2);
+    mjoin(3);
+    mjoin(4);
+    mjoin(5);
+    mjoin(6);
     return 0;
 }
 

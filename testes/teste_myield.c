@@ -36,7 +36,6 @@ int main(){
     printf("tid %d\n", tid);
     tid = mcreate(thread0, (void *)&i);
     printf("tid %d\n", tid);
-    dispatch_next();
 
     printf("entrou\n");
     mjoin(1);

@@ -10,12 +10,24 @@ TESTE1 = testes/teste1
 TESTE2 = testes/teste2
 TESTE_MLOCK = testes/teste_mlock
 TESTE_MJOIN = testes/teste_mjoin
-TESTE_QUEUE= testes/teste_queue
+TESTE_MCREATE = testes/teste_mcreate
+TESTE_MYIELD = testes/teste_myield
+TESTE_MJOIN_MCREATE = testes/teste_mjoin_mcreate
 
-teste_queue_run: teste_queue_compile
-		./$(TESTE_QUEUE)
-teste_queue_compile: teste_mjoin_run
-		gcc $(TESTE_QUEUE).c -o $(TESTE_QUEUE) $(FLAGS_TESTES)
+teste_mjoin_mcreate_run: teste_mjoin_mcreate_compile
+		./$(TESTE_MJOIN_MCREATE)
+teste_mjoin_mcreate_compile: teste_myield_run
+		gcc $(TESTE_MJOIN_MCREATE).c -o $(TESTE_MJOIN_MCREATE) $(FLAGS_TESTES)
+
+teste_myield_run: teste_myield_compile
+		./$(TESTE_MYIELD)
+teste_myield_compile: teste_mcreate_run
+		gcc $(TESTE_MYIELD).c -o $(TESTE_MYIELD) $(FLAGS_TESTES)
+
+teste_mcreate_run: teste_mcreate_compile
+		./$(TESTE_MCREATE)
+teste_mcreate_compile: teste_mjoin_run
+		gcc $(TESTE_MCREATE).c -o $(TESTE_MCREATE) $(FLAGS_TESTES)
 
 teste_mjoin_run: teste_mjoin_compile
 		./$(TESTE_MJOIN)

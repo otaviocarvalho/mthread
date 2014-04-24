@@ -24,13 +24,14 @@ int main(){
     int tid = -1;
     int i;
 
+    printf("\n Teste mcreate e mjoin \n");
+
     tid = mcreate(thread1, (void *)&i);
     printf("tid %d\n", tid);
     tid = mcreate(thread0, (void *)&i);
     printf("tid %d\n", tid);
     tid = mcreate(thread0, (void *)&i);
     printf("tid %d\n", tid);
-    dispatch_next();
     mjoin(1);
     printf("acabou\n");
     return 0;

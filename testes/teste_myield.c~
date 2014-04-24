@@ -42,7 +42,6 @@ int main(){
     mjoin(1);
     mjoin(2);
     printf("acabou\n");
-    tcb_priority_queue_print(ready_queue);
     return 0;
 }
 
