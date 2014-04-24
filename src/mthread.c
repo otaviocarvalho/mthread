@@ -610,8 +610,6 @@ int main(){
     /*munlock(&mutex);*/
     printf("desbloqueou thread main\n");
 
-    printf("entrou\n");
-    printf("acabou\n");
     tcb_priority_queue_print(ready_queue);
     return 0;
 }
