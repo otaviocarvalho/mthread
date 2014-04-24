@@ -8,7 +8,7 @@
 #include "../include/mthread.h"
 
 int main(int argc, char *argv[]) {
-    printf("\n Teste 1: Testa a função que calcula o tempo de execução de uma thread \n");
+    printf("\nTeste 1: Testa a função que calcula o tempo de execução de uma thread\n");
     timespec_test();
     printf("\n");
     return 0;

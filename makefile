@@ -9,6 +9,30 @@ TESTE = testes/teste
 TESTE1 = testes/teste1
 TESTE2 = testes/teste2
 TESTE_MLOCK = testes/teste_mlock
+TESTE_MJOIN = testes/teste_mjoin
+TESTE_MCREATE = testes/teste_mcreate
+TESTE_MYIELD = testes/teste_myield
+TESTE_MJOIN_MCREATE = testes/teste_mjoin_mcreate
+
+teste_mjoin_mcreate_run: teste_mjoin_mcreate_compile
+		./$(TESTE_MJOIN_MCREATE)
+teste_mjoin_mcreate_compile: teste_myield_run
+		gcc $(TESTE_MJOIN_MCREATE).c -o $(TESTE_MJOIN_MCREATE) $(FLAGS_TESTES)
+
+teste_myield_run: teste_myield_compile
+		./$(TESTE_MYIELD)
+teste_myield_compile: teste_mcreate_run
+		gcc $(TESTE_MYIELD).c -o $(TESTE_MYIELD) $(FLAGS_TESTES)
+
+teste_mcreate_run: teste_mcreate_compile
+		./$(TESTE_MCREATE)
+teste_mcreate_compile: teste_mjoin_run
+		gcc $(TESTE_MCREATE).c -o $(TESTE_MCREATE) $(FLAGS_TESTES)
+
+teste_mjoin_run: teste_mjoin_compile
+		./$(TESTE_MJOIN)
+teste_mjoin_compile: teste_mlock_run
+		gcc $(TESTE_MJOIN).c -o $(TESTE_MJOIN) $(FLAGS_TESTES)
 
 teste_mlock_run: teste_mlock_compile
 		./$(TESTE_MLOCK)
@@ -38,4 +62,4 @@ $(OBJ_MTHREAD): $(SRC_MTHREAD)
 
 clean:
 		rm -rf $(OBJ_MTHREAD) $(OUT_LIB)
-		rm $(TESTE) $(TESTE1) $(TESTE2) $(TESTE_MLOCK)
+		rm $(TESTE) $(TESTE1) $(TESTE2) $(TESTE_MLOCK) $(TESTE_MYIELD) $(TESTE_MJOIN) $(TESTE_MCREATE) $(TESTE_MJOIN_MCREATE) 

@@ -10,7 +10,7 @@ void thread0(void *arg) {
 }
 
 void thread1(void *arg) {
-    printf("Entrou na thread1\n");
+    printf("Entrou na thread\n");
     mjoin(id0);
     return;
 }
@@ -18,7 +18,7 @@ void thread1(void *arg) {
 int main(int argc, char *argv[]) {
     int i;
 
-    printf("\n Teste 2: Testa a mjoin com duas chamadas para o mesmo tid\n");
+    printf("\nTeste 2: Testa a mjoin com duas chamadas para o mesmo tid\n");
 
 	/* Código de execução */
 

@@ -2,27 +2,33 @@
 #include <stdlib.h>
 #include "../include/mthread.h"
 
-void thread0(void *arg) {
-    int i;
-    printf("Entrou na thread0\n");
+mmutex_t mutex;
+int test = 0;
+void thread1(void *arg) {
+    printf("Entrou na thread1\n");
     return;
+}
+void thread0(void *arg) {
+    printf("Entrou na thread0\n");
 }
 int main(){
     int tid = -1;
     int i;
+    
+    printf("\n Teste mlock \n");
 
-    printf("\nTeste mlock: Testa bloqueio de threads \n");
+    mmutex_init(&mutex);
+    tid = mcreate(thread0, (void *)&i);
+    printf("tid %d\n", tid);
+    tid = mcreate(thread1, (void *)&i);
+    printf("tid %d\n", tid);
+    tid = mcreate(thread1, (void *)&i);
 
-    tid = mcreate(thread0, (void *)&i);
-    printf("tid %d\n", tid);
-    tid = mcreate(thread0, (void *)&i);
-    printf("tid %d\n", tid);
-    tid = mcreate(thread0, (void *)&i);
-    printf("tid %d\n", tid);
-    dispatch_next();
+    printf("bloqueou thread main\n");
+    mjoin(1);
+    printf("desbloqueou thread main\n");
 
     printf("entrou\n");
-    mjoin(1);
     printf("acabou\n");
     //tcb_priority_queue_print(ready_queue);
     return 0;

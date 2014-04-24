@@ -574,6 +574,7 @@ int munlock (mmutex_t *m){
 
     return 0;
 }
+<<<<<<< HEAD
 
 // Testa mlock
 mmutex_t mutex;
@@ -811,3 +812,5 @@ int main(){
     /*[>tcb_list_print(list);<]*/
     /*return 0;*/
 /*}*/
+=======
+>>>>>>> 5247eabf91cdfbb84f71e500c5a4eb36fedfeb84
