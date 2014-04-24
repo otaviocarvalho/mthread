@@ -18,7 +18,7 @@ void thread1(void *arg) {
 int main(int argc, char *argv[]) {
     int i;
 
-    printf("\n Teste 2: Testa a mjoin com duas chamadas para o mesmo tid\n");
+    printf("\n Testa a mjoin com duas chamadas para o mesmo tid \n");
 
 	/* Código de execução */
 

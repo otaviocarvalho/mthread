@@ -6,13 +6,18 @@ INCLUDES = -I./include/
 
 FLAGS_TESTES = -L./lib -lmthread -Wall -lrt
 TESTE = testes/teste
-TESTE1 = testes/teste1
 TESTE2 = testes/teste2
 TESTE_MLOCK = testes/teste_mlock
 TESTE_MJOIN = testes/teste_mjoin
 TESTE_MCREATE = testes/teste_mcreate
 TESTE_MYIELD = testes/teste_myield
 TESTE_MJOIN_MCREATE = testes/teste_mjoin_mcreate
+TESTE_SCHEDULER_SPN = testes/teste_scheduler_spn
+
+teste_scheduler_spn_run: teste_scheduler_spn_compile
+		./$(TESTE_SCHEDULER_SPN)
+teste_scheduler_spn_compile: teste_mjoin_mcreate_run
+		gcc $(TESTE_SCHEDULER_SPN).c -o $(TESTE_SCHEDULER_SPN) $(FLAGS_TESTES)
 
 teste_mjoin_mcreate_run: teste_mjoin_mcreate_compile
 		./$(TESTE_MJOIN_MCREATE)
@@ -41,13 +46,8 @@ teste_mlock_compile: teste2_run
 
 teste2_run: teste2_compile
 		./$(TESTE2)
-teste2_compile: teste1_run
+teste2_compile: teste_run
 		gcc $(TESTE2).c -o $(TESTE2) $(FLAGS_TESTES)
-
-teste1_run: teste1_compile
-		./$(TESTE1)
-teste1_compile: teste_run
-		gcc $(TESTE1).c -o $(TESTE1) $(FLAGS_TESTES)
 
 teste_run: teste_compile
 		./$(TESTE)
@@ -62,4 +62,4 @@ $(OBJ_MTHREAD): $(SRC_MTHREAD)
 
 clean:
 		rm -rf $(OBJ_MTHREAD) $(OUT_LIB)
-		rm $(TESTE) $(TESTE1) $(TESTE2) $(TESTE_MLOCK) $(TESTE_MYIELD) $(TESTE_MJOIN) $(TESTE_MCREATE) $(TESTE_MJOIN_MCREATE) 
+		rm $(TESTE) $(TESTE2) $(TESTE_MLOCK) $(TESTE_MYIELD) $(TESTE_MJOIN) $(TESTE_MCREATE) $(TESTE_MJOIN_MCREATE) $(TESTE_SCHEDULER_SPN)

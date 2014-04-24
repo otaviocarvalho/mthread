@@ -1,16 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../include/mthread.h"
-#include <time.h>
 
 #define MTHREAD_STACK 1024*1024
 #define READY 0
 #define RUNNING 1
 #define BLOCKED 2
 
+#define SCHEDULER_TYPE 1
+
 int initialized_mthread = 0;
 int num_threads = 0;
 int num_tid = 0;
+
+struct timespec forecast_init;
+struct timespec forecast_end;
 
 tcb_t *running_thread = NULL;
 tcb_priority_queue_t *ready_queue = NULL;
@@ -20,43 +24,86 @@ tcb_list_t *blocked = NULL;
 ucontext_t *thread_finished; // Contexto a ser chamado quando uma thread termina
 
 int tcb_priority_queue_add(tcb_priority_queue_t *queue, tcb_t *data){
-    tcb_priority_queue_t *n = (tcb_priority_queue_t *) malloc(sizeof(tcb_priority_queue_t));
+    if (SCHEDULER_TYPE == 0){
+        tcb_priority_queue_t *n = (tcb_priority_queue_t *) malloc(sizeof(tcb_priority_queue_t));
 
-    if (n != NULL){
-        if (queue->data == NULL){ // Insere primeiro elemento
-            /*queue->front = queue;*/
-            /*queue->back = queue;*/
-            queue->data = data;
-            queue->next = NULL;
-            queue->prev = NULL;
+        if (n != NULL){
+            if (queue->data == NULL){ // Insere primeiro elemento
+                /*queue->front = queue;*/
+                /*queue->back = queue;*/
+                queue->data = data;
+                queue->next = NULL;
+                queue->prev = NULL;
 
-            free(n);
-        }
-        else { // Insere demais elementos
-            n->data = data;
-            n->next = NULL;
-
-            /*tcb_priority_queue_print(ready_queue);*/
-            tcb_priority_queue_t *aux = queue;
-            while (aux->next != NULL){
-                aux = aux->next;
+                free(n);
             }
-            aux->next = n;
-            /*queue->back = n;*/
+            else { // Insere demais elementos
+                n->data = data;
+                n->next = NULL;
 
-            /*printf("tid %d\n", data->tid);*/
-            /*(queue->back)->next = n;*/
-            /*queue->back = n;*/
-            /*printf("queue back tid %d\n", (queue->back)->data->tid);*/
-            /*printf("queue back tid %d\n", ((queue->prev)->back)->data->tid);*/
+                /*tcb_priority_queue_print(ready_queue);*/
+                tcb_priority_queue_t *aux = queue;
+                while (aux->next != NULL){
+                    aux = aux->next;
+                }
+                aux->next = n;
+                /*queue->back = n;*/
 
-            /*printf("queue %d\n", (ready_queue->next)->data->tid);*/
+                /*printf("tid %d\n", data->tid);*/
+                /*(queue->back)->next = n;*/
+                /*queue->back = n;*/
+                /*printf("queue back tid %d\n", (queue->back)->data->tid);*/
+                /*printf("queue back tid %d\n", ((queue->prev)->back)->data->tid);*/
+
+                /*printf("queue %d\n", (ready_queue->next)->data->tid);*/
+            }
+
+            return 1;
         }
 
-        return 1;
+        return 0;
     }
+    else if (SCHEDULER_TYPE == 1) {
+        tcb_priority_queue_t *n = (tcb_priority_queue_t *) malloc(sizeof(tcb_priority_queue_t));
 
-    return 0;
+        if (n != NULL){
+            if (queue->data == NULL){ // Insere primeiro elemento
+                queue->data = data;
+                queue->next = NULL;
+                queue->prev = NULL;
+
+                free(n);
+            }
+            else { // Insere demais elementos
+                n->data = data;
+                n->next = NULL;
+
+                int found_greater = 0;
+                tcb_priority_queue_t *aux = queue;
+                while ((aux->next != NULL) && !found_greater){
+                    if ((aux->next)->data->forecast > n->data->forecast){
+                        found_greater = 1;
+                    }
+                    else {
+                        aux = aux->next;
+                    }
+                }
+
+                if (found_greater){
+                    n->next = aux->next;
+                    aux->next = n;
+                }
+                else {
+                    aux->next = n;
+                }
+            }
+
+            return 1;
+        }
+
+        return 0;
+
+    }
 }
 
 tcb_t* tcb_priority_queue_remove(tcb_priority_queue_t *q){
@@ -71,18 +118,10 @@ tcb_t* tcb_priority_queue_remove(tcb_priority_queue_t *q){
         q->data = NULL;
         q->prev = NULL;
         q->next = NULL;
-        /*q->back = NULL;*/
-        /*q->front = NULL;*/
     }
     else { // Mais de um elemento
         removed_data = q->data;
         remove = q->next;
-
-        /*q->front = q->next;*/
-        /*q->back = (q->next)->back;*/
-
-        /*printf("queue back queue remove %d\n", (q->next)->back->data->tid);*/
-        /*printf("queue back queue remove %d\n", q->back->data->tid);*/
 
         q->data = (q->next)->data;
         q->prev = NULL;
@@ -116,8 +155,6 @@ tcb_priority_queue_t* tcb_priority_queue_init(){
         q->data = NULL;
         q->next = NULL;
         q->prev = NULL;
-        /*q->front = NULL;*/
-        /*q->back = NULL;*/
     }
 
     return q;
@@ -234,6 +271,7 @@ tcb_t* tcb_create(int tid, int status, ucontext_t* context){
     if (thread != NULL){
         thread->tid = tid;
         thread->status = status;
+        thread->forecast = 0;
         thread->context = context;
         thread->waiting = tcb_list_create();
         thread->waiting_flag = 0;
@@ -272,23 +310,15 @@ tcb_t* schedule(){
 }
 
 int dispatch_next(){
-    tcb_priority_queue_print(ready_queue);
     tcb_t *scheduled_thread = schedule();
-    printf("scheduled_thread tid %d\n", scheduled_thread->tid);
 
     if (scheduled_thread != NULL){
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_init);
+
         // Thread é colocada em execução (Dispatch)
         setcontext(scheduled_thread->context);
     }
 
-    /*if (scheduled_thread == NULL){*/
-        /*return -1;*/
-    /*}*/
-    /*else {*/
-        /*// Thread é colocada em execução (Dispatch)*/
-        /*setcontext(scheduled_thread->context);*/
-        /*return 0;*/
-    /*}*/
     return 0;
 }
 
@@ -329,20 +359,14 @@ int create_thread(ucontext_t* context){
 }
 
 void thread_finish(){
-    printf("thread_finish context\n");
-    /*exit(-1);*/
-    /*murder(running_thread);*/
     tcb_list_t *waiting_list = running_thread->waiting;
 
     while (waiting_list != NULL){
         if (waiting_list->data != NULL){
-            printf("entrou pending thread\n");
             tcb_t *pending_thread = (tcb_t *) waiting_list->data;
-            tcb_list_remove(running_thread->waiting, pending_thread); // Erro no free() da lista
+            tcb_list_remove(running_thread->waiting, pending_thread);
             pending_thread->status = READY;
-            /*printf("entrou pending error\n");*/
-            /*printf("%d\n", running_thread->tid);*/
-            /*printf("%d\n", pending_thread->tid);*/
+
             add_ready(pending_thread);
 
             waiting_list = waiting_list->next;
@@ -404,7 +428,6 @@ int mthread_init(){
         }
 
         makecontext(thread_finished, (void (*)(void)) thread_finish, 0); // Chama a função thread_finish() ao terminar o contexto
-        /*setcontext(thread_finished);*/
     }
     else {
         return -4;
@@ -424,9 +447,6 @@ int mthread_init(){
         }
 
         dispatch_next();
-        /*if (dispatch_next() < 0){*/
-            /*return -9;*/
-        /*}*/
     }
 
     return 0;
@@ -498,16 +518,26 @@ int myield(void){
 
     if (!yield){
         yield = 1;
+
+        /*printf("before add ready\n");*/
+        /*tcb_priority_queue_print(ready_queue);*/
+
         add_ready(running_thread);
+
+        /*tcb_priority_queue_print(ready_queue);*/
+        /*printf("after add ready\n");*/
+
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
+        running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
+        /*printf("forecast for thread %d: %lf\n", running_thread->tid, running_thread->forecast);*/
+
         dispatch_next();
     }
 
-    printf("voltou myield\n");
     return 0;
 }
 
 int mjoin(int tid){
-    printf("mjoin thread tid %d\n", tid);
     tcb_t *thr_wait = tcb_list_get_thread(all_threads, tid);
 
     if (thr_wait == NULL){
@@ -519,7 +549,6 @@ int mjoin(int tid){
         thr_wait->waiting_flag = 1;
     }
     else {
-        printf("segunda thread querendo fazendo join() no mesmo tid\n");
         return -1;
     }
 
@@ -528,6 +557,10 @@ int mjoin(int tid){
 
     getcontext(running_thread->context);
     if (running_thread->status == BLOCKED){
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
+        running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
+        /*printf("forecast for thread %d: %lf\n", running_thread->tid, running_thread->forecast);*/
+
         dispatch_next();
     }
 
@@ -543,17 +576,18 @@ int mmutex_init(mmutex_t *m){
 int mlock (mmutex_t *m){
     if (m->locked == 0){
         m->locked = 1;
-        printf("lockou\n");
     }
     else {
-
-        printf("here locked\n");
         tcb_list_add(m->waiting, running_thread);
 
         running_thread->status = BLOCKED;
         tcb_list_add(blocked, running_thread);
 
         getcontext(running_thread->context);
+
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &forecast_end);
+        running_thread->forecast = ((double) forecast_init.tv_nsec + (double) forecast_end.tv_nsec) / 2;
+        /*printf("forecast for thread %d: %lf\n", running_thread->tid, running_thread->forecast);*/
 
         dispatch_next();
     }
@@ -572,44 +606,5 @@ int munlock (mmutex_t *m){
         }
     }
 
-    return 0;
-}
-
-// Testa mlock
-mmutex_t mutex;
-int test = 0;
-void thread1(void *arg) {
-    printf("Entrou na thread1\n");
-    return;
-}
-void thread0(void *arg) {
-    printf("Entrou na thread0\n");
-    /*mlock(&mutex);*/
-    /*printf("bloqueou thread\n");*/
-    /*test++;*/
-    /*munlock(&mutex);*/
-    /*printf("desbloqueou thread\n");*/
-    return;
-}
-int main(){
-    int tid = -1;
-    int i;
-
-    mmutex_init(&mutex);
-    tid = mcreate(thread0, (void *)&i);
-    printf("tid %d\n", tid);
-    tid = mcreate(thread1, (void *)&i);
-    printf("tid %d\n", tid);
-    tid = mcreate(thread1, (void *)&i);
-
-    /*mlock(&mutex);*/
-    printf("bloqueou thread main\n");
-    /*test++;*/
-    /*printf("%d\n", test);*/
-    mjoin(1);
-    /*munlock(&mutex);*/
-    printf("desbloqueou thread main\n");
-
-    tcb_priority_queue_print(ready_queue);
     return 0;
 }

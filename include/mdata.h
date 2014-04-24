@@ -10,6 +10,7 @@
  * Os grupos devem alterar essa estrutura de acordo com sua necessidade
  */
 #include <ucontext.h>
+#include <time.h>
 
 typedef struct tcb_list {
     struct tcb *data;
@@ -20,6 +21,7 @@ typedef struct tcb_list {
 typedef struct tcb {
     int tid;
     int status;
+    double forecast;
     int waiting_flag;
     ucontext_t *context;
     tcb_list_t *waiting;
@@ -27,8 +29,6 @@ typedef struct tcb {
 
 typedef struct tcb_priority_queue {
     tcb_t *data;
-    //struct tcb_priority_queue *front;
-    //struct tcb_priority_queue *back;
     struct tcb_priority_queue *prev;
     struct tcb_priority_queue *next;
 } tcb_priority_queue_t;

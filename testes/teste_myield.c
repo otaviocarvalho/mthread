@@ -27,8 +27,8 @@ void thread0(void *arg) {
 int main(){
     int tid = -1;
     int i;
-    
-    printf("\nTeste myield: \n");
+
+    printf("\n Teste myield: \n");
 
     tid = mcreate(thread1, (void *)&i);
     printf("tid %d\n", tid);

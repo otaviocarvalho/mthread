@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     int id0, id1;
     int i;
 
-    printf("\nTeste 0: Teste padrão fornecido para o trabalho\n");
+    printf("\n Teste padrao fornecido para o trabalho \n");
 
 	/* Código de execução */
 
